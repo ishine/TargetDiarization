@@ -2,6 +2,7 @@
 # torch  # install manually
 # torchaudio  # install manually
 numpy<2
+python-dotenv
 
 
 ### AudioProcessor ###
