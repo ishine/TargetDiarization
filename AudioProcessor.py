@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Written by GD Studio
-# Date: 2025-9-25
+# Date: 2025-9-26
 
 import audioread
 import librosa
@@ -22,43 +22,42 @@ from pydub.silence import split_on_silence
 from typing import Literal, Union
 
 # Import additional packages for advanced functions
-load_dotenv()
-DISABLED_PACKAGES = [item.strip() for item in os.getenv("AUDIOPROCESSOR_DISABLED_PACKAGES", "").split(",") if item.strip()]
-FAILED_PACKAGES = []
 file_dir = str(os.path.dirname(os.path.abspath(__file__))).replace('\\', '/')
 sys.path.append(file_dir)
+load_dotenv()
+DISABLED_PACKAGES = [item.strip() for item in os.getenv("AUDIOPROCESSOR_DISABLED_PACKAGES", "").split(",") if item.strip()]
 if "torch" not in DISABLED_PACKAGES:
     try:
         import torch
     except Exception as e:
-        FAILED_PACKAGES.append("torch")
+        DISABLED_PACKAGES.append("torch")
         print(f"Failed to load torch runtime and skip.\n{e}")
 if "mdx" not in DISABLED_PACKAGES:
     try:
         import onnxruntime as ort
     except Exception as e:
-        FAILED_PACKAGES.append("mdx")
+        DISABLED_PACKAGES.append("mdx")
         print(f"Failed to load ONNX runtime and skip.\n{e}")
 if "noisereduce" not in DISABLED_PACKAGES:
     try:
         import noisereduce as nr
     except Exception as e:
-        FAILED_PACKAGES.append("noisereduce")
+        DISABLED_PACKAGES.append("noisereduce")
         print(f"Failed to load noisereduce and skip.\n{e}")
 if "enhancer" not in DISABLED_PACKAGES:
     try:
         from resemble_enhance.enhancer.train import Enhancer, HParams
         from resemble_enhance.inference import inference as enhancer_api
     except Exception as e:
-        FAILED_PACKAGES.append("enhancer")
+        DISABLED_PACKAGES.append("enhancer")
         print(f"Failed to load resemble package and skip.\n{e}")
 if "separater" not in DISABLED_PACKAGES or "restorer" not in DISABLED_PACKAGES:
     try:
         import look2hear.models
         from silero_vad import load_silero_vad, get_speech_timestamps
     except Exception as e:
-        FAILED_PACKAGES.append("separater")
-        FAILED_PACKAGES.append("restorer")
+        DISABLED_PACKAGES.append("separater")
+        DISABLED_PACKAGES.append("restorer")
         print(f"Failed to load look2hear package and skip.\n{e}")
 
 
@@ -157,8 +156,8 @@ class AudioProcessor:
         def correct_path(path: str):
             path = path.replace("\\", "/").rstrip("/")
             if not os.path.isabs(path):
-                path = f"{self.file_dir}/{path}"
-            path = os.path.abspath(path)
+                if os.path.exists(f"{self.file_dir}/{path}"):
+                    path = f"{self.file_dir}/{path}"
             return path
         
         self.mdx_weights_file = correct_path(self.mdx_weights_file)
@@ -167,9 +166,9 @@ class AudioProcessor:
         self.restorer_weights_folder = correct_path(self.restorer_weights_folder)
 
         # Init models
-        if "torch" not in FAILED_PACKAGES:
+        if "torch" not in DISABLED_PACKAGES:
             self.get_device()
-            if self.is_denoise_vocal and os.path.isfile(self.mdx_weights_file) and "mdx" not in FAILED_PACKAGES:
+            if self.is_denoise_vocal and os.path.isfile(self.mdx_weights_file) and "mdx" not in DISABLED_PACKAGES:
                 try:
                     self.init_mdx_model()
                 except Exception as e:
@@ -177,7 +176,7 @@ class AudioProcessor:
                     self.is_denoise_vocal = False
             else:
                 self.is_denoise_vocal = False
-            if self.is_enhance_vocal and os.path.isdir(self.enhancer_weights_folder) and "enhancer" not in FAILED_PACKAGES:
+            if self.is_enhance_vocal and os.path.isdir(self.enhancer_weights_folder) and "enhancer" not in DISABLED_PACKAGES:
                 try:
                     self.init_enhancer_model()
                 except Exception as e:
@@ -185,7 +184,7 @@ class AudioProcessor:
                     self.is_enhance_vocal = False
             else:
                 self.is_enhance_vocal = False
-            if self.is_separate_audio and os.path.isdir(self.separater_weights_folder) and "separater" not in FAILED_PACKAGES:
+            if self.is_separate_audio and os.path.isdir(self.separater_weights_folder) and "separater" not in DISABLED_PACKAGES:
                 try:
                     self.init_separater_model()
                 except Exception as e:
@@ -193,7 +192,7 @@ class AudioProcessor:
                     self.is_separate_audio = False
             else:
                 self.is_separate_audio = False
-            if self.is_restore_audio and os.path.isdir(self.restorer_weights_folder) and "restorer" not in FAILED_PACKAGES:
+            if self.is_restore_audio and os.path.isdir(self.restorer_weights_folder) and "restorer" not in DISABLED_PACKAGES:
                 try:
                     self.init_restorer_model()
                 except Exception as e:

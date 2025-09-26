@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Written by GD Studio
-# Date: 2025-9-18
+# Date: 2025-9-26
 
 import base64
 import json
@@ -22,11 +22,10 @@ from modelscope.utils.constant import Tasks
 from typing import Union
 
 # Import additional packages for advanced functions
-load_dotenv()
-DISABLED_PACKAGES = [item.strip() for item in os.getenv("ASRPROCESSOR_DISABLED_PACKAGES", "").split(",") if item.strip()]
-FAILED_PACKAGES = []
 file_dir = str(os.path.dirname(os.path.abspath(__file__))).replace('\\', '/')
 sys.path.append(file_dir)
+load_dotenv()
+DISABLED_PACKAGES = [item.strip() for item in os.getenv("ASRPROCESSOR_DISABLED_PACKAGES", "").split(",") if item.strip()]
 ap_dir = os.path.abspath(f"{file_dir}/../AudioProcessor")
 if os.path.isdir(ap_dir):
     sys.path.append(ap_dir)
@@ -34,39 +33,39 @@ if "tencent" not in DISABLED_PACKAGES:
     try:
         from TencentASR import FlashRecognizer, FlashRecognitionRequest
     except Exception as e:
-        FAILED_PACKAGES.append("tencent")
+        DISABLED_PACKAGES.append("tencent")
         print(f"Failed to load Tencent ASR module and skip: {e}")
 if "xunfei" not in DISABLED_PACKAGES:
     try:
         from XunfeiASR import XunfeiASR
     except Exception as e:
-        FAILED_PACKAGES.append("xunfei")
+        DISABLED_PACKAGES.append("xunfei")
         print(f"Failed to load Xunfei ASR module and skip: {e}")
 if "gemini" not in DISABLED_PACKAGES:
     try:
         import mimetypes
         from google import genai
     except Exception as e:
-        FAILED_PACKAGES.append("gemini")
+        DISABLED_PACKAGES.append("gemini")
         print(f"Failed to load Google Gemini module and skip: {e}")
 if "whisper_v2" not in DISABLED_PACKAGES or "whisper_v3" not in DISABLED_PACKAGES:
     try:
         import whisper
     except Exception as e:
-        FAILED_PACKAGES.append("whisper_v2")
-        FAILED_PACKAGES.append("whisper_v3")
+        DISABLED_PACKAGES.append("whisper_v2")
+        DISABLED_PACKAGES.append("whisper_v3")
         print(f"Failed to load Whisper module and skip: {e}")
 if "whisper_finetune" not in DISABLED_PACKAGES:
     try:
         from transformers import AutoModelForSpeechSeq2Seq, WhisperProcessor
     except Exception as e:
-        FAILED_PACKAGES.append("whisper_finetune")
+        DISABLED_PACKAGES.append("whisper_finetune")
         print(f"Failed to load Transformers module and skip: {e}")
 if "pyannote" not in DISABLED_PACKAGES:
     try:
         from pyannote.audio import Pipeline as pyannote_pipeline
     except Exception as e:
-        FAILED_PACKAGES.append("pyannote")
+        DISABLED_PACKAGES.append("pyannote")
         print(f"Failed to load Pyannote module and skip: {e}")
 
 
@@ -126,8 +125,6 @@ class ASRProcessor:
             if not os.path.isabs(path):
                 if os.path.exists(f"{self.file_dir}/{path}"):
                     path = f"{self.file_dir}/{path}"
-                else:
-                    print(f"Cannot find model {path} in local machine. Try to download from internet to cache dir...")
             return path
         
         for i in range(len(self.asr_model_dirs)):
@@ -161,29 +158,29 @@ class ASRProcessor:
                         self.api_config = json.load(f)
                 except:
                     pass
-            if "tencent" not in FAILED_PACKAGES:
+            if "tencent" not in DISABLED_PACKAGES:
                 try:
                     self.tencent_asr = FlashRecognizer(appid=self.api_config['tencent_appid'], secret_id=self.api_config['tencent_secret_id'], secret_key=self.api_config['tencent_secret_key'])
                 except Exception as e:
-                    FAILED_PACKAGES.append("tencent")
+                    DISABLED_PACKAGES.append("tencent")
                     print(f"Failed to init Tencent ASR: {e}")
-            if "xunfei" not in FAILED_PACKAGES:
+            if "xunfei" not in DISABLED_PACKAGES:
                 try:
                     self.xunfei_asr = XunfeiASR(appid=self.api_config['xunfei_appid'], api_key=self.api_config['xunfei_api_key'], api_secret=self.api_config['xunfei_api_secret'])
                 except Exception as e:
-                    FAILED_PACKAGES.append("xunfei")
+                    DISABLED_PACKAGES.append("xunfei")
                     print(f"Failed to init Xunfei ASR: {e}")
-            if "gemini" not in FAILED_PACKAGES:
+            if "gemini" not in DISABLED_PACKAGES:
                 try:
                     self.gemini_asr = self.init_gemini(api_key=self.api_config['gemini_api_key'], base_url=self.api_config['gemini_base_url'])
                 except Exception as e:
-                    FAILED_PACKAGES.append("gemini")
+                    DISABLED_PACKAGES.append("gemini")
                     print(f"Failed to init Gemini ASR: {e}")
             self.jzx_asr_endpoint = os.getenv("JZX_ASR_ENDPOINT")
             if not self.jzx_asr_endpoint:
                 self.jzx_asr_endpoint = self.api_config.get("jzx_asr_endpoint", "")
             if not self.jzx_asr_endpoint:
-                FAILED_PACKAGES.append("jzx")
+                DISABLED_PACKAGES.append("jzx")
         else:
             self.is_asr_api = False
 
@@ -220,7 +217,7 @@ class ASRProcessor:
                             print("Using fast_asr mode.")
                             self.asr['sensevoice'] = AutoModel(model=asr_model_dir, device=self.device, disable_pbar=not self.verbose_log, disable_update=True)
                     except Exception as e:
-                        FAILED_PACKAGES.append("sensevoice")
+                        DISABLED_PACKAGES.append("sensevoice")
                         print(f"Failed to load SenseVoice model: {e}")
                 elif "paraformer" in asr_model_dir.lower():
                     try:
@@ -230,28 +227,28 @@ class ASRProcessor:
                             print("Using fast_asr mode.")
                             self.asr['paraformer'] = AutoModel(model=asr_model_dir, device=self.device, disable_pbar=not self.verbose_log, disable_update=True)
                     except Exception as e:
-                        FAILED_PACKAGES.append("paraformer")
+                        DISABLED_PACKAGES.append("paraformer")
                         print(f"Failed to load Paraformer model: {e}")
                 elif "whisper" in asr_model_dir.lower() and "v2" in asr_model_dir.lower() and os.path.isfile(asr_model_dir):
                     try:
                         self.asr['whisper_v2'] = whisper.load_model(asr_model_dir)
                     except Exception as e:
-                        FAILED_PACKAGES.append("whisper_v2")
+                        DISABLED_PACKAGES.append("whisper_v2")
                         print(f"Failed to load Whisper V2 model: {e}")
                 elif "whisper" in asr_model_dir.lower() and "v3" in asr_model_dir.lower() and os.path.isfile(asr_model_dir):
                     try:
                         self.asr['whisper_v3'] = whisper.load_model(asr_model_dir)
                     except Exception as e:
-                        FAILED_PACKAGES.append("whisper_v3")
+                        DISABLED_PACKAGES.append("whisper_v3")
                         print(f"Failed to load Whisper V3 model: {e}")
-                elif "whisper" in asr_model_dir.lower() and "finetune" in asr_model_dir.lower() and os.path.isdir(asr_model_dir) and "whisper_finetune" not in FAILED_PACKAGES:
+                elif "whisper" in asr_model_dir.lower() and "finetune" in asr_model_dir.lower() and os.path.isdir(asr_model_dir) and "whisper_finetune" not in DISABLED_PACKAGES:
                     try:
                         torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
                         self.asr['whisper_finetune'] = types.SimpleNamespace()
                         self.asr['whisper_finetune'].model = AutoModelForSpeechSeq2Seq.from_pretrained(asr_model_dir, torch_dtype=torch_dtype, use_safetensors=True).to(self.device)
                         self.asr['whisper_finetune'].processor = WhisperProcessor.from_pretrained(asr_model_dir)
                     except Exception as e:
-                        FAILED_PACKAGES.append("whisper_finetune")
+                        DISABLED_PACKAGES.append("whisper_finetune")
                         print(f"Failed to load Whisper finetune model: {e}")
         if self.is_vad:
             print(f"Loading VAD model from: {os.path.abspath(self.vad_model_dir)}")
@@ -259,7 +256,7 @@ class ASRProcessor:
                 self.vad = AutoModel(model=self.vad_model_dir, device=self.device, disable_pbar=not self.verbose_log, disable_update=True)
             except Exception as e:
                 self.is_vad = False
-                FAILED_PACKAGES.append("funasr_vad")
+                DISABLED_PACKAGES.append("funasr_vad")
                 print(f"Failed to load FunASR VAD model: {e}")
         if self.is_punc:
             print(f"Loading punctuation restore model from: {os.path.abspath(self.vad_model_dir)}")
@@ -267,7 +264,7 @@ class ASRProcessor:
                 self.punc = AutoModel(model=self.punc_model_dir, device=self.device, disable_pbar=not self.verbose_log, disable_update=True)
             except Exception as e:
                 self.is_punc = False
-                FAILED_PACKAGES.append("funasr_punctuation")
+                DISABLED_PACKAGES.append("funasr_punctuation")
                 print(f"Failed to load punctuation restorer model: {e}")
         if self.is_timestamp:
             print(f"Loading timestamp prediction model from: {os.path.abspath(self.timestamp_model_dir)}")
@@ -275,7 +272,7 @@ class ASRProcessor:
                 self.timestamp = pipeline(task=Tasks.speech_timestamp, model=self.timestamp_model_dir, disable_pbar=not self.verbose_log, disable_update=True)
             except Exception as e:
                 self.is_timestamp = False
-                FAILED_PACKAGES.append("modelscope_timestamp")
+                DISABLED_PACKAGES.append("modelscope_timestamp")
                 print(f"Failed to load timestamp prediction model: {e}")
         if self.is_emotion:
             print(f"Loading emotion detection model from: {os.path.abspath(self.emotion_model_dir)}")
@@ -283,17 +280,18 @@ class ASRProcessor:
                 self.emotion = pipeline(task=Tasks.emotion_recognition, model=self.emotion_model_dir, disable_pbar=not self.verbose_log, disable_update=True)
             except Exception as e:
                 self.is_emotion = False
-                FAILED_PACKAGES.append("modelscope_emotion")
+                DISABLED_PACKAGES.append("modelscope_emotion")
                 print(f"Failed to load emotion detection model: {e}")
-        if self.is_diarization and "pyannote" not in FAILED_PACKAGES:
+        if self.is_diarization and "pyannote" not in DISABLED_PACKAGES:
             print(f"Loading Pyannote diarization model from: {os.path.abspath(self.diarization_model_dir)}")
             try:
                 os.environ['HF_ENDPOINT'] = "https://hf-mirror.com"
-                self.diarization = pyannote_pipeline.from_pretrained(self.diarization_model_dir, use_auth_token="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")
+                hf_token = os.getenv("HF_TOKEN")
+                self.diarization = pyannote_pipeline.from_pretrained(self.diarization_model_dir, use_auth_token=hf_token)
                 self.diarization.to(torch.device(self.device))
             except Exception as e:
                 self.is_diarization = False
-                FAILED_PACKAGES.append("pyannote")
+                DISABLED_PACKAGES.append("pyannote")
                 print(f"Failed to load Pyannote diarization model: {e}")
     
     # Init Google Gemini LLM API
@@ -374,7 +372,7 @@ class ASRProcessor:
     # Predict spoken text from audio using local model
     def asr_detection(self, wav_file: Union[str, list, bytes, np.ndarray], language: str = "auto", prompt: str = "", asr_engine: str = "paraformer", no_punc: bool = False, output_text_only: bool = False, output_raw_result: bool = False):
         result_list = []
-        if asr_engine in FAILED_PACKAGES:
+        if asr_engine in DISABLED_PACKAGES:
             print("ASR engine init failed. Return empty result.")
             if output_text_only:
                 return ""
@@ -531,7 +529,7 @@ class ASRProcessor:
     def asr_detection_api(self, wav_file: Union[str, list, bytes], language: str = "auto", prompt: str = "", asr_engine: str = "tencent", no_punc: bool = False, output_text_only: bool = False, output_raw_result: bool = False):
         result_list = []
         asr_engine = asr_engine.lower()
-        if not self.is_asr_api or asr_engine in FAILED_PACKAGES:
+        if not self.is_asr_api or asr_engine in DISABLED_PACKAGES:
             print("ASR API hasn't been loaded. Return empty result.")
             if output_text_only:
                 return ""

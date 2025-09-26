@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Written by GD Studio
-# Date: 2025-9-19
+# Date: 2025-9-26
 
 import io
 import modelscope
@@ -12,10 +12,12 @@ from pyannote.audio import Pipeline as pyannote_pipeline
 from TargetASR import TargetASR
 from typing import Union, Literal
 from AudioProcessor import AudioProcessor
+from dotenv import load_dotenv
 
-# Add environment path
+# Add environment
 file_dir = str(os.path.dirname(os.path.abspath(__file__))).replace('\\', '/')
 sys.path.append(file_dir)
+load_dotenv()
 
 
 # Main class
@@ -73,15 +75,23 @@ class TargetDiarization:
             disable_update=False
         )
         print(f"Init Overlap-detection model from: {self.od_model_dir}")
-        # if self.od_model_dir[0] != '/' and os.path.isfile(f"{self.file_dir}/{self.od_model_dir}") and os.path.isfile(f"{self.file_dir}/{self.od_model_dir.split('/')[0]}/config.yaml"):
-        #     self.od_model_dir = f"{self.file_dir}/{self.od_model_dir.split('/')[0]}/config.yaml"
         if os.path.isabs(self.od_model_dir) and not self.od_model_dir.endswith("config.yaml"):
             self.od_model_dir = f"{self.od_model_dir}/config.yaml"
         os.environ['HF_ENDPOINT'] = "https://hf-mirror.com"
-        self.od_pipeline = pyannote_pipeline.from_pretrained(self.od_model_dir, use_auth_token="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")
-        self.od_pipeline.to(torch.device(self.device))
-        if self.pyannote_clustering_threshold > 0.0:
-            self.od_pipeline._pipelines['clustering']._instantiated['threshold'] = float(self.pyannote_clustering_threshold)
+        hf_token = os.getenv("HF_TOKEN")
+        try:
+            self.od_pipeline = pyannote_pipeline.from_pretrained(self.od_model_dir, use_auth_token=hf_token)
+            self.od_pipeline.to(torch.device(self.device))
+            if self.pyannote_clustering_threshold > 0.0:
+                self.od_pipeline._pipelines['clustering']._instantiated['threshold'] = float(self.pyannote_clustering_threshold)
+        except Exception as e:
+            self.od_pipeline = None
+            print("====================================================")
+            print(f"Failed to init pyannote model from HuggingFace: {e}")
+            if not hf_token:
+                print("Please fill the `HF_TOKEN` field in .env config file.")
+            print("!!! SYSTEM WILL SKIP VOICE OVERLAP DETECTION PART !!!")
+            print("=====================================================")
 
     # Main method
     def infer(self, wav_file: Union[str, np.ndarray, io.BytesIO], target_file: Union[str, np.ndarray, io.BytesIO] = None, sampling_rate: int = 16000, is_single: bool = False, output_target_audio: bool = True):
@@ -110,14 +120,14 @@ class TargetDiarization:
                 print("ERROR: No VAD result in target audio. Automatically select one speaker from the input audio as the target.")
         sd_result = None
         pyannote_result = None
-        if audio_data.shape[0] / sampling_rate >= long_audio_threshold:
+        if audio_data.shape[0] / sampling_rate >= long_audio_threshold or self.od_pipeline is None:
             try:
                 sd_result = self.sd_pipeline(audio_data)
                 sd_result = self.sd_result_parser(sd_result=sd_result, is_single=is_single, combine_timerange=False)
             except Exception as e:
                 sd_result = None
                 print(e)
-        if not sd_result:
+        if not sd_result and self.od_pipeline is not None:
             pyannote_result = self.od_pipeline({
                 "waveform": self.ap.ndarray_to_torchaudio(audio_data=audio_data),
                 "sample_rate": sampling_rate
@@ -128,7 +138,7 @@ class TargetDiarization:
         overlap_map = []
         target_spk = ""
         if not is_single:
-            if pyannote_result is None:
+            if pyannote_result is None and self.od_pipeline is not None:
                 pyannote_result = self.od_pipeline({
                     "waveform": self.ap.ndarray_to_torchaudio(audio_data=audio_data),
                     "sample_rate": sampling_rate
