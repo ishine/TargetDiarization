@@ -27,10 +27,7 @@ TargetDiarization is a deep learning-based audio processing system designed to i
 
 ## Quick Demo
 
-<video width="100%" controls>
-  <source src="https://raw.githubusercontent.com/jingzhunxue/TargetDiarization/refs/heads/main/assets/webui_demo.mp4" type="video/mp4" />
-  Your browser does not support video playback. You can download and watch it: assets/webui_demo.mp4
-</video>
+https://raw.githubusercontent.com/jingzhunxue/TargetDiarization/refs/heads/main/assets/webui_demo.mp4
 
 
 - Task: Separate the target speaker’s audio from a multi-speaker mixture and perform ASR for all speakers in the audio.
@@ -133,7 +130,7 @@ Download all pretrained models:
 git-lfs clone https://www.modelscope.cn/models/jzx-ai-lab/target_diarization_models.git
 ```
 
-Model directory structure:
+<IMPORTANT> Model directory structure:
 
 ```
 TargetDiarization/
@@ -160,7 +157,7 @@ TargetDiarization/
 
 ## Basic Usage
 
-### 0. Startup Parameters (optional)
+### 0. Startup Parameters
 
 - Copy `.env.example` in the project to a new file named `.env`.
 
