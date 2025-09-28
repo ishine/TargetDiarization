@@ -143,10 +143,8 @@ cython_debug/
 # VSCode
 .vscode/
 
-# Test files
-*.bak
+# Checkpoints
 /checkpoints/mossformer2-finetune/
-/samples/
 /iic/speech_campplus_speaker-diarization_common/*
 /iic/speech_eres2netv2w24s4ep4_sv_zh-cn_16k-common/*
 /iic/speech_fsmn_vad_zh-cn-16k-common-pytorch/*
@@ -157,5 +155,8 @@ cython_debug/
 /mdx/weights/*
 /pyannote/segmentation-3.0/*
 /pyannote/speaker-diarization-3.1/*
+
+# Test files
+*.bak
 /BAK/
-/android-client/*
+/samples/
