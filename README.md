@@ -29,6 +29,9 @@ TargetDiarization is a deep learning-based audio processing system designed to i
 
 https://github.com/user-attachments/assets/942ff51b-0fc0-4ce5-8798-e3fc49ede9a6
 
+**↑ Please unmute the video above before playing ↑**
+
+[Unable to play? Click here](https://www.modelscope.cn/models/jzx-ai-lab/target_diarization_models/resolve/master/assets/webui_demo.mp4)
 
 - Task: Separate the target speaker’s audio from a multi-speaker mixture and perform ASR for all speakers in the audio.
 

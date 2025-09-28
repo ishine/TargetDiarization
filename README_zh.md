@@ -30,6 +30,9 @@ TargetDiarization (目标说话人日志) 是一个基于深度学习的音频�
 
 https://github.com/user-attachments/assets/942ff51b-0fc0-4ce5-8798-e3fc49ede9a6
 
+**↑ 请在播放前取消上方视频的静音 ↑**
+
+[无法播放点击此处](https://www.modelscope.cn/models/jzx-ai-lab/target_diarization_models/resolve/master/assets/webui_demo.mp4)
 
 - 任务：从多人混合音频中分离出目标说话人音频内容，并对音频中所有说话人进行ASR识别。
 
