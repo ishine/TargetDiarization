@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # Written by GD Studio
-# Date: 2025-9-26
+# Date: 2025-10-13
 
 import io
+import math
 import modelscope
 import numpy as np
 import os
@@ -804,8 +805,13 @@ class TargetDiarization:
                         if chunk_item['speaker'] == spk:
                             text = ""
                             for char_item in combined_spk_asr['timestamp']:
-                                if chunk_item['timerange'][0] <= char_item[-1][0] <= chunk_item['timerange'][1]:
-                                    text = text + char_item[0]
+                                start_point = math.floor(chunk_item['timerange'][0] * 10) / 10
+                                end_point = math.ceil(chunk_item['timerange'][1] * 10) / 10
+                                if start_point <= char_item[-1][0] <= end_point:
+                                    if combined_spk_asr['language'] in ["zh", "ja", "ko", "yue"]:
+                                        text = text + char_item[0]
+                                    else:
+                                        text = text + " " + char_item[0]
                             if not more_args['no_punc']:
                                 text = self.tasr.asrp.punctuation_restore(text=text)
                             chunk_item['text'] = text
